@@ -12,6 +12,7 @@ import com.kalivex.app.ui.screens.HomeScreen
 import com.kalivex.app.ui.screens.SettingsScreen
 import com.kalivex.app.ui.screens.VoiceScreen
 import com.kalivex.app.ui.screens.LoginScreen
+import com.kalivex.app.network.ApiClient
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -24,6 +25,16 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun NavGraph(navController: NavHostController = rememberNavController(), modifier: Modifier = Modifier) {
+    // Hook auth expiry to navigate to login
+    ApiClient.onAuthExpired = {
+        try {
+            // navigate on main thread
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Home.route)
+            }
+        } catch (_: Exception) {}
+    }
+
     NavHost(navController = navController, startDestination = Screen.Home.route, modifier = modifier) {
         composable(Screen.Home.route) { HomeScreen(onNavigate = { route -> navController.navigate(route) }) }
         composable(Screen.Voice.route) { VoiceScreen(onNavigateBack = { navController.popBackStack() }) }
