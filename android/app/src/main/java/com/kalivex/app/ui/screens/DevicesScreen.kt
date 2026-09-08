@@ -9,13 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kalivex.app.devices.PairingRepository
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
+import kotlinx.coroutines.launch
 
 @Composable
 fun DevicesScreen(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val pairingRepo = remember { PairingRepository(context) }
     var pairingStatus by remember { mutableStateOf("Not paired") }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -25,10 +26,9 @@ fun DevicesScreen(onNavigateBack: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
         Button(onClick = {
             pairingStatus = "Pairing..."
-            // Simple pairing demo; in production call suspend functions properly
-            pairingRepo.pairDevice("android-device-1") { ok, msg ->
-                if (ok) pairingStatus = "Paired"
-                else pairingStatus = "Pair failed: $msg"
+            coroutineScope.launch {
+                val (ok, msg) = pairingRepo.pairDevice("android-device-1")
+                if (ok) pairingStatus = "Paired" else pairingStatus = "Pair failed: $msg"
             }
         }) { Text("Pair Device") }
 

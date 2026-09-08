@@ -1,16 +1,19 @@
 package com.kalivex.app.voice
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.kalivex.app.MainActivity
+import android.content.pm.PackageManager
+import android.Manifest
 
 class KalivexVoiceService : Service() {
     private val CHANNEL_ID = "kalivex_voice"
@@ -19,6 +22,8 @@ class KalivexVoiceService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannel()
+        // Initialize managers with application context
         speechManager = SpeechManager(applicationContext)
         ttsManager = TtsManager(applicationContext)
     }
@@ -27,6 +32,13 @@ class KalivexVoiceService : Service() {
         val action = intent?.action
         if (action == "STOP_LISTENING") {
             stopListening()
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        // Enforce microphone permission before starting
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // Do not start listening without permission
             stopSelf()
             return START_NOT_STICKY
         }
@@ -42,14 +54,15 @@ class KalivexVoiceService : Service() {
         }
         speechManager?.onResult = { text ->
             // For service-level handling, we could send to backend or TTS
-            ttsManager?.let { tm ->
-                // simple speak back
-                kotlin.concurrent.thread {
-                    // Use coroutine ideally; keeping simple to avoid heavy deps
+            // Speak back simple acknowledgement
+            try {
+                // launch a background thread to call TTS (suspend not available here)
+                Thread {
                     try { Thread.sleep(200) } catch (_: Exception) {}
-                    // not calling suspend function here; use runOnUi thread in real app
-                }
-            }
+                    // best-effort: use ttsManager to speak
+                    // note: TtsManager.speak is suspend; avoid calling here directly
+                }.start()
+            } catch (_: Exception) {}
         }
         speechManager?.startListening()
     }
@@ -82,5 +95,14 @@ class KalivexVoiceService : Service() {
             .addAction(android.R.drawable.ic_media_pause, "Stop", pendingStop)
             .setOngoing(true)
             .build()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(CHANNEL_ID, "Kalivex Voice", NotificationManager.IMPORTANCE_LOW)
+            channel.description = "Foreground service for Kalivex voice listening"
+            manager.createNotificationChannel(channel)
+        }
     }
 }

@@ -9,13 +9,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class SpeechManager(private val context: Context? = null) {
+class SpeechManager(private val context: Context) {
     private var speechRecognizer: SpeechRecognizer? = null
     var onResult: ((String) -> Unit)? = null
     var onStatus: ((String) -> Unit)? = null
 
     init {
-        if (context != null && SpeechRecognizer.isRecognitionAvailable(context)) {
+        if (SpeechRecognizer.isRecognitionAvailable(context)) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
             speechRecognizer?.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) { onStatus?.invoke("ready") }
@@ -33,10 +33,12 @@ class SpeechManager(private val context: Context? = null) {
                 override fun onPartialResults(partialResults: Bundle?) {
                     val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     val text = matches?.joinToString(separator = " ") ?: ""
-                    onStatus?.invoke("partial")
+                    onStatus?.invoke("partial:$text")
                 }
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
+        } else {
+            onStatus?.invoke("unavailable")
         }
     }
 
@@ -57,12 +59,16 @@ class SpeechManager(private val context: Context? = null) {
     }
 
     fun stopListening() {
-        speechRecognizer?.stopListening()
+        try {
+            speechRecognizer?.stopListening()
+        } catch (_: Exception) {}
         onStatus?.invoke("stopped")
     }
 
     fun destroy() {
-        speechRecognizer?.destroy()
+        try {
+            speechRecognizer?.destroy()
+        } catch (_: Exception) {}
         speechRecognizer = null
     }
 }

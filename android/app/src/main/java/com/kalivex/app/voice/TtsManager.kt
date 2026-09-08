@@ -7,19 +7,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
 
-class TtsManager(private val context: Context? = null) {
+class TtsManager(private val context: Context) {
     private var tts: TextToSpeech? = null
     private val initialized = CompletableDeferred<Boolean>()
 
     init {
-        if (context != null) {
-            tts = TextToSpeech(context) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    tts?.language = Locale.getDefault()
-                    initialized.complete(true)
-                } else {
-                    initialized.complete(false)
-                }
+        tts = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale.getDefault()
+                initialized.complete(true)
+            } else {
+                initialized.complete(false)
             }
         }
     }
@@ -34,8 +32,10 @@ class TtsManager(private val context: Context? = null) {
     }
 
     fun shutdown() {
-        tts?.stop()
-        tts?.shutdown()
+        try {
+            tts?.stop()
+            tts?.shutdown()
+        } catch (_: Exception) {}
         tts = null
     }
 }

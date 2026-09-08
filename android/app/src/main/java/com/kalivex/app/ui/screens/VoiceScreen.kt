@@ -7,6 +7,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.kalivex.app.voice.SpeechManager
 import com.kalivex.app.voice.TtsManager
@@ -15,8 +16,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun VoiceScreen(onNavigateBack: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
-    val speechManager = remember { SpeechManager() }
-    val ttsManager = remember { TtsManager() }
+    val context = LocalContext.current
+    val speechManager = remember { SpeechManager(context) }
+    val ttsManager = remember { TtsManager(context) }
 
     var listening by remember { mutableStateOf(false) }
     var transcript by remember { mutableStateOf("") }

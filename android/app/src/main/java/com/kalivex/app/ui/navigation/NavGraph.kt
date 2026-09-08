@@ -11,6 +11,7 @@ import com.kalivex.app.ui.screens.DevicesScreen
 import com.kalivex.app.ui.screens.HomeScreen
 import com.kalivex.app.ui.screens.SettingsScreen
 import com.kalivex.app.ui.screens.VoiceScreen
+import com.kalivex.app.ui.screens.LoginScreen
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -18,6 +19,7 @@ sealed class Screen(val route: String) {
     object Chat : Screen("chat")
     object Settings : Screen("settings")
     object Devices : Screen("devices")
+    object Login : Screen("login")
 }
 
 @Composable
@@ -28,5 +30,6 @@ fun NavGraph(navController: NavHostController = rememberNavController(), modifie
         composable(Screen.Chat.route) { ChatScreen(onNavigateBack = { navController.popBackStack() }) }
         composable(Screen.Settings.route) { SettingsScreen(onNavigateBack = { navController.popBackStack() }) }
         composable(Screen.Devices.route) { DevicesScreen(onNavigateBack = { navController.popBackStack() }) }
+        composable(Screen.Login.route) { LoginScreen(onNavigateBack = { navController.popBackStack() }, onLoginSuccess = { navController.popBackStack() }) }
     }
 }
