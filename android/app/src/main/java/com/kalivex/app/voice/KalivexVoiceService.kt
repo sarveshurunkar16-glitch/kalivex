@@ -1,55 +1,86 @@
 package com.kalivex.app.voice
 
-import android.app.*
+import android.app.Notification
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.os.Build
 import android.os.IBinder
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
+import com.kalivex.app.MainActivity
 
 class KalivexVoiceService : Service() {
     private val CHANNEL_ID = "kalivex_voice"
-    private var speechRecognizer: SpeechRecognizer? = null
+    private var speechManager: SpeechManager? = null
+    private var ttsManager: TtsManager? = null
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Kalivex Listening")
-            .setContentText("Tap to stop")
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setOngoing(true)
-            .build()
-        startForeground(2501, notification)
-
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        speechManager = SpeechManager(applicationContext)
+        ttsManager = TtsManager(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Start listening if requested
+        val action = intent?.action
+        if (action == "STOP_LISTENING") {
+            stopListening()
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        startForeground(2501, buildNotification())
+        startListening()
         return START_STICKY
     }
 
+    private fun startListening() {
+        speechManager?.onStatus = { status ->
+            // Could broadcast status to app via LocalBroadcast or other mechanisms
+        }
+        speechManager?.onResult = { text ->
+            // For service-level handling, we could send to backend or TTS
+            ttsManager?.let { tm ->
+                // simple speak back
+                kotlin.concurrent.thread {
+                    // Use coroutine ideally; keeping simple to avoid heavy deps
+                    try { Thread.sleep(200) } catch (_: Exception) {}
+                    // not calling suspend function here; use runOnUi thread in real app
+                }
+            }
+        }
+        speechManager?.startListening()
+    }
+
+    private fun stopListening() {
+        speechManager?.stopListening()
+        speechManager?.destroy()
+        ttsManager?.shutdown()
+    }
+
     override fun onDestroy() {
-        speechRecognizer?.destroy()
-        stopForeground(true)
+        stopListening()
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val chan = NotificationChannel(CHANNEL_ID, "Kalivex Voice", NotificationManager.IMPORTANCE_LOW)
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(chan)
-        }
+    private fun buildNotification(): Notification {
+        val stopIntent = Intent(this, KalivexVoiceService::class.java).apply { action = "STOP_LISTENING" }
+        val pendingStop = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        val activityIntent = Intent(this, MainActivity::class.java)
+        val pendingActivity = PendingIntent.getActivity(this, 0, activityIntent, PendingIntent.FLAG_IMMUTABLE)
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Kalivex Listening")
+            .setContentText("Tap to stop")
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setContentIntent(pendingActivity)
+            .addAction(android.R.drawable.ic_media_pause, "Stop", pendingStop)
+            .setOngoing(true)
+            .build()
     }
 }
