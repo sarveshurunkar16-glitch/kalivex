@@ -13,14 +13,21 @@ class AuthRepository(private val context: Context) {
     suspend fun register(email: String, password: String): TokenResponse {
         val r = api.register(RegisterRequest(email, password))
         storage.saveToken(r.access_token)
+        ApiClient.setAuthToken(r.access_token)
         return r
     }
 
     suspend fun login(email: String, password: String): TokenResponse {
         val r = api.login(RegisterRequest(email, password))
         storage.saveToken(r.access_token)
+        ApiClient.setAuthToken(r.access_token)
         return r
     }
 
     fun getToken(): String? = storage.getToken()
+
+    fun logout() {
+        storage.clear()
+        ApiClient.setAuthToken(null)
+    }
 }

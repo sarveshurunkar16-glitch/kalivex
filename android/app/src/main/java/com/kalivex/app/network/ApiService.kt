@@ -7,15 +7,7 @@ import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-data class RegisterRequest(val email: String, val password: String)
-data class TokenResponse(val access_token: String, val token_type: String)
-
-data class ChatRequest(val message: String, val conversation_id: Int?)
-data class ChatResponse(val reply: String, val conversation_id: Int)
-
-data class PairRequest(val name: String, val device_type: String)
-
-data class CommandRequest(val name: String, val device_id: Int?, val payload: Map<String, Any>?)
+// existing data classes
 
 interface ApiService {
     @POST("/api/auth/register")
@@ -32,4 +24,7 @@ interface ApiService {
 
     @POST("/api/commands/execute")
     suspend fun executeCommand(@Body body: CommandRequest, @Header("Authorization") auth: String): Map<String, Any>
+
+    @POST("/api/commands/{id}/confirm")
+    suspend fun confirmCommand(@Path("id") id: Int, @Header("Authorization") auth: String): Map<String, Any>
 }
